@@ -1,0 +1,6 @@
+// Safe, app-only order-status watcher. It reads existing order status; it does not modify the Admin Panel.
+const STATUS_MESSAGES={pending:'Your order has been received.',confirmed:'Your order has been confirmed.',packed:'Your order has been packed.','out for delivery':'Your order is out for delivery.',delivered:'Your order has been delivered.'};
+function normalStatus(s){return String(s||'').toLowerCase().replace(/[_-]+/g,' ').trim()}
+async function checkOrderStatus(orderId){if(!orderId||!window.supabase)return null;const {data,error}=await supabase.from('orders').select('order_id,status,total,created_at').eq('order_id',orderId).maybeSingle();if(error||!data)return null;const key=normalStatus(data.status);const storage='aditya_status_'+data.order_id;const previous=localStorage.getItem(storage);if(previous&&previous!==key&&window.AdityaNotifications){window.AdityaNotifications.save('Order '+data.order_id,STATUS_MESSAGES[key]||('Order status: '+data.status),data.order_id)}localStorage.setItem(storage,key);return data}
+function watchOrderStatus(orderId,intervalMs=60000){checkOrderStatus(orderId);return setInterval(()=>checkOrderStatus(orderId),intervalMs)}
+window.AdityaOrderStatus={check:checkOrderStatus,watch:watchOrderStatus};
